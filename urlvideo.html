@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video NSFW Filter</title>
+  <style>
+    .blurred {
+      filter: blur(50px);
+    }
+  </style>
+</head>
+<body>
+  <h1>Video NSFW Filter</h1>
+  <label for="urlInput">Enter Video URL:</label>
+  <input type="text" id="urlInput" placeholder="Enter video URL" />
+  <button id="submitURLButton">Submit URL Video</button>
+  <br />
+  <video id="videoFromURL" controls crossOrigin="anonymous"></video>
+
+  <canvas id="canvasFromURL" style="display: none;"></canvas>
+  
+  <script>
+    const videoFromURL = document.getElementById('videoFromURL');
+    const canvasFromURL = document.getElementById('canvasFromURL');
+    const ctxFromURL = canvasFromURL.getContext('2d');
+    let isBlurringFromURL = false;
+    let safeTimeStartURL = null;
+    const safeDurationFromURL = 5000; // Duration to keep video safe before removing blur
+
+    document.getElementById('submitURLButton').addEventListener('click', handleURLInput);
+
+    function handleURLInput() {
+      const videoURL = document.getElementById('urlInput').value;
+      if (videoURL) {
+        videoFromURL.src = videoURL;
+        videoFromURL.addEventListener('play', () => {
+          setInterval(captureImageFromURL, 500); // Capture an image every 0.5 seconds
+        });
+      } else {
+        alert('Please enter a video URL.');
+      }
+    }
+
+    async function captureImageFromURL() {
+      if (videoFromURL.paused || videoFromURL.ended) return;
+
+      canvasFromURL.width = videoFromURL.videoWidth;
+      canvasFromURL.height = videoFromURL.videoHeight;
+      ctxFromURL.drawImage(videoFromURL, 0, 0, canvasFromURL.width, canvasFromURL.height);
+      const dataUrlFromURL = canvasFromURL.toDataURL('image/jpeg');
+      const blobFromURL = dataURItoBlobFromURL(dataUrlFromURL);
+      await sendImageFromURL(blobFromURL);
+    }
+
+    function dataURItoBlobFromURL(dataURIFromURL) {
+      const byteStringFromURL = atob(dataURIFromURL.split(',')[1]);
+      const mimeStringFromURL = dataURIFromURL.split(',')[0].split(':')[1].split(';')[0];
+      const abFromURL = new ArrayBuffer(byteStringFromURL.length);
+      const iaFromURL = new Uint8Array(abFromURL);
+      for (let i = 0; i < byteStringFromURL.length; i++) {
+        iaFromURL[i] = byteStringFromURL.charCodeAt(i);
+      }
+      return new Blob([abFromURL], { type: mimeStringFromURL });
+    }
+
+    async function sendImageFromURL(blobFromURL) {
+      const formDataFromURL = new FormData();
+      formDataFromURL.append('image', blobFromURL, 'image.jpg');
+
+      try {
+        const responseFromURL = await fetch('http://localhost:5552/nsfw', {
+          method: 'POST',
+          body: formDataFromURL
+        });
+
+        if (!responseFromURL.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const resultFromURL = await responseFromURL.json();
+        console.log('NSFW Detection Results:', resultFromURL);
+
+        // Check the results to determine if the content is unsafe
+        const unsafeFromURL = resultFromURL.some(prediction => {
+          return (prediction.className === 'Porn' || prediction.className === 'Sexy' || prediction.className === 'Hentai') &&
+                 prediction.probability > 0.2;
+        });
+
+        if (unsafeFromURL) {
+          applyBlurFromURL();
+          safeTimeStartURL = null; // Reset safe time
+        } else {
+          handleSafePeriodFromURL();
+        }
+      } catch (error) {
+        console.error('Error sending image:', error);
+      }
+    }
+
+    function applyBlurFromURL() {
+      if (!isBlurringFromURL) {
+        isBlurringFromURL = true;
+        videoFromURL.classList.add('blurred');
+        console.log('Blur applied to video'); // Debugging line
+      }
+    }
+
+    function handleSafePeriodFromURL() {
+      if (isBlurringFromURL) {
+        if (!safeTimeStartURL) {
+          safeTimeStartURL = Date.now();
+        } else {
+          const elapsedTime = Date.now() - safeTimeStartURL;
+          if (elapsedTime >= safeDurationFromURL) {
+            removeBlurFromURL();
+            safeTimeStartURL = null; // Reset safe time
+          }
+        }
+      }
+    }
+
+    function removeBlurFromURL() {
+      if (isBlurringFromURL) {
+        videoFromURL.classList.remove('blurred');
+        isBlurringFromURL = false;
+        console.log('Blur removed from video'); // Debugging line
+      }
+    }
+  </script>
+</body>
+</html>

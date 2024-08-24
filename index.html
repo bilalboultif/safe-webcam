@@ -1,175 +1,191 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NSFW Image Classifier</title>
+  <title>Safe Media Viewer</title>
   <style>
-    #result {
-      margin-top: 20px;
+    /* Basic Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    #uploadedImage {
+
+    /* Full height and center content */
+    html, body {
+        font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      margin: 0;
+    }
+
+    /* Main container styling */
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      max-width: 800px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* Flex container to arrange sections */
+    .flex-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Flex items for sections */
+    .section {
+      margin: 10px 0;
+    }
+
+    video, canvas, img {
+      border: 1px solid #ccc;
+      margin: 10px;
+    }
+    /* Styling for file inputs and buttons */
+    input[type="file"], button {
+      margin: 10px;
+      border-radius: 4px;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      border: 2px solid #007bff;
+      background: #007bff;
+      color: white;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Styling for the image and video elements */
+    img, video {
+      border-radius: 8px;
       max-width: 100%;
       height: auto;
-      margin-top: 20px;
-      transition: filter 0.3s;
+      margin-bottom: 20px;
     }
-    #videoContainer {
-      position: relative;
-      width: 100%;
+    #loadingIndicator {
+  font-size: 18px;
+  color: #007bff;
+}
+
+
+    /* Styling for the live video element */
+    #webcamVideo {
+      border-radius: 8px;
+      max-width: 100%;
       height: auto;
-      margin-top: 20px;
+      display: none; /* Initially hidden */
     }
-    #webcamFeed {
-      width: 100%;
-      height: auto;
-    }
-    #videoCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: auto;
-      pointer-events: none; /* Allow interaction with video below */
-      transition: filter 0.3s; /* Smooth transition for blur effect */
+
+    /* Blurred effect */
+    canvas {
+      display: none;
     }
     .blurred {
-      filter: blur(30px);
+      filter: blur(50px);
+    }
+    button {
+      margin: 5px;
+      padding: 10px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h1>NSFW Image Classifier</h1>
 
-  <!-- Form for uploading images -->
-  <form id="uploadForm" enctype="multipart/form-data">
-    <label for="imageUpload">Choose an image to upload:</label>
-    <input type="file" id="imageUpload" name="image" accept="image/*" required>
-    <button type="submit">Upload Image</button>
-  </form>
+<div class="container">
+  <div class="flex-container">
+    <!-- Section for Video Upload -->
+    <h1>Media Upload and Moderation</h1>
+    <div id="videoSection" class="section">
+        <h2>videos protected</h2>
+      <input type="file" id="videoUploadFromVideo" accept="video/*">
+      <video id="videoFromVideo" controls></video>
+      <canvas id="canvasFromVideo" style="display:none;"></canvas>
+    </div>
 
-  <!-- Result and uploaded image display -->
-  <div id="result"></div>
-  <img id="uploadedImage" style="display: none;">
+    <div id="videoUrlSection" class="section">
+        <h2>Check Video from URL</h2>
+        <label for="videoUrlSection">Enter Video URL:</label>
+  <input type="text" id="urlInput" placeholder="Enter video URL" />
+  <button id="submitURLButton">Submit URL Video</button>
+  <br />
+  <video id="videoFromURL" controls></video>
+  <canvas id="canvasFromURL" style="display: none;"></canvas>
+      </div>
+      
+    <!-- Section for Image Upload -->
+    <div id="urlSection" class="section">
+        <h2>Check Image from URL</h2>
+        <input type="text" id="imageUrl" placeholder="Enter image URL">
+        <button onclick="loadImageFromUrl()">Check Image</button>
+        <div id="imageContainer">
+          <div id="loadingIndicator" style="display:none;">Loading...</div>
+          <img id="imagePlayer" alt="Loaded Image" style="display:none;">
+        </div>
+      </div>
+      
+      
 
-  <!-- Webcam section -->
-  <h2>Webcam Feed</h2>
-  <div id="videoContainer">
-    <video id="webcamFeed" autoplay></video>
-    <canvas id="videoCanvas"></canvas>
+    <!-- Section for Live Webcam -->
+    <div id="webcamSection" class="section">
+        <h2>cams protected</h2>
+      <button id="startLiveButton" onclick="startLiveVideo()">Start Live Video</button>
+      <button id="stopLiveButton" onclick="stopLiveVideo()">Stop Live Video</button>
+      <video id="webcamVideo" width="100%" autoplay></video>
+      <canvas id="videoCanvas" style="display: none;"></canvas>
+    </div>
   </div>
-  <button id="startVideo">Start Video</button>
-  <button id="stopVideo">Stop Video</button>
 
-  <script>
-    const videoElement = document.getElementById('webcamFeed');
-    const canvasElement = document.getElementById('videoCanvas');
-    const ctx = canvasElement.getContext('2d');
-    const startButton = document.getElementById('startVideo');
-    const stopButton = document.getElementById('stopVideo');
-    const resultElement = document.getElementById('result');
+  <p>
+    Media courtesy of 
+    <a href="https://www.bigbuckbunny.org/" target="_blank">Big Buck Bunny</a>.
+  </p>
+</div>
 
-    let isVideoOn = false;
-    let isSafe = true;
-    let intervalId = null;
+<script>
+  // Image handling
+  async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    const imagePlayer = document.getElementById('imagePlayer');
 
-    async function startVideo() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoElement.srcObject = stream;
-      videoElement.onloadedmetadata = () => {
-        videoElement.play();
-        canvasElement.width = videoElement.videoWidth;
-        canvasElement.height = videoElement.videoHeight;
-        isVideoOn = true;
-        startFrameAnalysis();
-      };
-    }
-
-    function stopVideo() {
-      const stream = videoElement.srcObject;
-      if (stream) {
-        const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop());
-        videoElement.srcObject = null;
-      }
-      isVideoOn = false;
-      clearInterval(intervalId);
-      canvasElement.classList.remove('blurred'); // Ensure blur is removed when video stops
-    }
-
-    function startFrameAnalysis() {
-      intervalId = setInterval(async () => {
-        if (!isVideoOn) return;
-
-        ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-
-        canvasElement.toBlob(async (blob) => {
-          const formData = new FormData();
-          formData.append('image', blob, 'frame.jpg');
-
-          try {
-            const response = await fetch('http://localhost:5552/nsfw', {
-              method: 'POST',
-              body: formData
-            });
-
-            if (!response.ok) {
-              throw new Error('Network response was not ok');
-            }
-
-            const result = await response.json();
-            console.log(result); // For debugging
-            updateBlurState(result);
-          } catch (error) {
-            resultElement.innerText = `Error: ${error.message}`;
-          }
-        }, 'image/jpeg');
-      }, 1000); // Capture frame every 1000 milliseconds (1 second)
-    }
-
-    function updateBlurState(result) {
-      let neutralProbability = 0;
-      let hentaiProbability = 0;
-      let pornProbability = 0;
-      let sexyProbability = 0;
-
-      for (const prediction of result) {
-        switch (prediction.className) {
-          case 'Neutral':
-            neutralProbability = prediction.probability;
-            break;
-          case 'Hentai':
-            hentaiProbability = prediction.probability;
-            break;
-          case 'Porn':
-            pornProbability = prediction.probability;
-            break;
-          case 'Sexy':
-            sexyProbability = prediction.probability;
-            break;
-        }
-      }
-
-      isSafe = neutralProbability > 0.5 &&
-               hentaiProbability <= 0.5 &&
-               pornProbability <= 0.5 &&
-               sexyProbability <= 0.5;
-
-      if (!isSafe) {
-        canvasElement.classList.add('blurred');
-      } else {
-        canvasElement.classList.remove('blurred');
-      }
-    }
-
-    startButton.addEventListener('click', startVideo);
-    stopButton.addEventListener('click', stopVideo);
-
-    document.getElementById('uploadForm').addEventListener('submit', async function(event) {
-      event.preventDefault();
+    if (file) {
+      const objectURL = URL.createObjectURL(file);
+      imagePlayer.src = objectURL;
 
       const formData = new FormData();
-      formData.append('image', document.getElementById('imageUpload').files[0]);
+      formData.append('image', file);
 
       try {
         const response = await fetch('http://localhost:5552/nsfw', {
@@ -182,57 +198,509 @@
         }
 
         const result = await response.json();
-        console.log(result); // For debugging
-        displayResult(result);
+        console.log(result);
+        updateImageBlurState(result);
       } catch (error) {
-        resultElement.innerText = `Error: ${error.message}`;
-      }
-    });
-
-    function displayResult(result) {
-      let isSafe = true;
-      let neutralProbability = 0;
-      let hentaiProbability = 0;
-      let pornProbability = 0;
-      let sexyProbability = 0;
-
-      let resultHTML = '<h2>NSFW Classification Results:</h2><ul>';
-
-      for (const prediction of result) {
-        resultHTML += `<li>${prediction.className}: ${prediction.probability.toFixed(3)}</li>`;
-
-        switch (prediction.className) {
-          case 'Neutral':
-            neutralProbability = prediction.probability;
-            break;
-          case 'Hentai':
-            hentaiProbability = prediction.probability;
-            break;
-          case 'Porn':
-            pornProbability = prediction.probability;
-            break;
-          case 'Sexy':
-            sexyProbability = prediction.probability;
-            break;
-        }
-      }
-      resultHTML += '</ul>';
-
-      if (neutralProbability > 0.5 &&
-          hentaiProbability <= 0.5 &&
-          pornProbability <= 0.5 &&
-          sexyProbability <= 0.5) {
-        isSafe = true;
-      } else {
-        isSafe = false;
-      }
-
-      if (isSafe) {
-        resultElement.innerHTML = resultHTML + '<p>Safe Image</p>';
-      } else {
-        resultElement.innerHTML = resultHTML + '<p>Unsafe Image</p>';
+        console.error('Error:', error);
       }
     }
-  </script>
+  }
+
+  function updateImageBlurState(result) {
+    let neutralProbability = 0;
+    let hentaiProbability = 0;
+    let pornProbability = 0;
+    let sexyProbability = 0;
+
+    for (const prediction of result) {
+      switch (prediction.className) {
+        case 'Neutral':
+          neutralProbability = prediction.probability;
+          break;
+        case 'Hentai':
+          hentaiProbability = prediction.probability;
+          break;
+        case 'Porn':
+          pornProbability = prediction.probability;
+          break;
+        case 'Sexy':
+          sexyProbability = prediction.probability;
+          break;
+      }
+    }
+
+    const isSafe = neutralProbability > 0.5 &&
+                    hentaiProbability <= 0.5 &&
+                    pornProbability <= 0.5 &&
+                    sexyProbability <= 0.5;
+
+    const imagePlayer = document.getElementById('imagePlayer');
+    if (!isSafe) {
+      imagePlayer.classList.add('blurred');
+    } else {
+      imagePlayer.classList.remove('blurred');
+    }
+  }
+
+ 
+  async function loadImageFromUrl() {
+  const url = document.getElementById('imageUrl').value;
+  const imagePlayer = document.getElementById('imagePlayer');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+
+  if (url) {
+    try {
+      // Show loading indicator and hide image initially
+      loadingIndicator.style.display = 'block';
+      imagePlayer.style.display = 'none';
+
+      // Fetch the image from the URL
+      const response = await fetch(url);
+      const blob = await response.blob();
+      
+      // Check if the image URL is valid and fetches correctly
+      if (!response.ok || !blob.type.startsWith('image/')) {
+        throw new Error('Invalid image URL');
+      }
+
+      // Convert the blob to a URL
+      const objectURL = URL.createObjectURL(blob);
+      imagePlayer.src = objectURL;
+
+      // Create a FormData object and append the image
+      const formData = new FormData();
+      formData.append('image', blob, 'image.jpg');
+
+      // Send the image to the server for moderation
+      const moderationResponse = await fetch('http://localhost:5552/nsfw', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!moderationResponse.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      // Get the moderation result
+      const result = await moderationResponse.json();
+      updateImageBlurState(result);
+
+      // Hide loading indicator and show image after check
+      loadingIndicator.style.display = 'none';
+      imagePlayer.style.display = 'block';
+    } catch (error) {
+      console.error('Error:', error);
+      loadingIndicator.style.display = 'none'; // Hide loading indicator on error
+    }
+  }
+}
+
+function updateImageBlurState(result) {
+  let neutralProbability = 0;
+  let hentaiProbability = 0;
+  let pornProbability = 0;
+  let sexyProbability = 0;
+
+  // Iterate over the result to find the probabilities
+  result.forEach(prediction => {
+    switch (prediction.className) {
+      case 'Neutral':
+        neutralProbability = prediction.probability;
+        break;
+      case 'Hentai':
+        hentaiProbability = prediction.probability;
+        break;
+      case 'Porn':
+        pornProbability = prediction.probability;
+        break;
+      case 'Sexy':
+        sexyProbability = prediction.probability;
+        break;
+    }
+  });
+
+  // Determine if the image is safe
+  const isSafe = neutralProbability > 0.5 &&
+                  hentaiProbability <= 0.5 &&
+                  pornProbability <= 0.5 &&
+                  sexyProbability <= 0.5;
+
+  // Apply or remove blur based on safety
+  if (!isSafe) {
+    document.getElementById('imagePlayer').classList.add('blurred');
+  } else {
+    document.getElementById('imagePlayer').classList.remove('blurred');
+  }
+}
+
+
+  // Video handling
+  const videoFromVideo = document.getElementById('videoFromVideo');
+  const canvasFromVideo = document.getElementById('canvasFromVideo');
+  const ctxFromVideo = canvasFromVideo.getContext('2d');
+  let isBlurringFromVideo = false;
+  let safeTimeStart = null;
+  const safeDurationFromVideo = 5000; // Duration to keep video safe before removing blur
+
+  document.getElementById('videoUploadFromVideo').addEventListener('change', handleVideoUploadFromVideo);
+
+  function handleVideoUploadFromVideo(event) {
+    const fileFromVideo = event.target.files[0];
+    if (fileFromVideo) {
+      const objectURLFromVideo = URL.createObjectURL(fileFromVideo);
+      videoFromVideo.src = objectURLFromVideo;
+      videoFromVideo.addEventListener('play', () => {
+        setInterval(captureImageFromVideo, 500); // Capture an image every 0.5 seconds
+      });
+    }
+  }
+
+  async function captureImageFromVideo() {
+    if (videoFromVideo.paused || videoFromVideo.ended) return;
+
+    canvasFromVideo.width = videoFromVideo.videoWidth;
+    canvasFromVideo.height = videoFromVideo.videoHeight;
+    ctxFromVideo.drawImage(videoFromVideo, 0, 0, canvasFromVideo.width, canvasFromVideo.height);
+    const dataUrlFromVideo = canvasFromVideo.toDataURL('image/jpeg');
+    const blobFromVideo = dataURItoBlobFromVideo(dataUrlFromVideo);
+    await sendImageFromVideo(blobFromVideo);
+  }
+
+  function dataURItoBlobFromVideo(dataURIFromVideo) {
+    const byteStringFromVideo = atob(dataURIFromVideo.split(',')[1]);
+    const mimeStringFromVideo = dataURIFromVideo.split(',')[0].split(':')[1].split(';')[0];
+    const abFromVideo = new ArrayBuffer(byteStringFromVideo.length);
+    const iaFromVideo = new Uint8Array(abFromVideo);
+    for (let i = 0; i < byteStringFromVideo.length; i++) {
+      iaFromVideo[i] = byteStringFromVideo.charCodeAt(i);
+    }
+    return new Blob([abFromVideo], { type: mimeStringFromVideo });
+  }
+
+  async function sendImageFromVideo(blobFromVideo) {
+    const formDataFromVideo = new FormData();
+    formDataFromVideo.append('image', blobFromVideo, 'image.jpg');
+
+    try {
+      const responseFromVideo = await fetch('http://localhost:5552/nsfw', {
+        method: 'POST',
+        body: formDataFromVideo
+      });
+
+      if (!responseFromVideo.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const resultFromVideo = await responseFromVideo.json();
+      console.log('NSFW Detection Results:', resultFromVideo);
+
+      // Check the results to determine if the content is unsafe
+      const unsafeFromVideo = resultFromVideo.some(prediction => {
+        return (prediction.className === 'Porn' || prediction.className === 'Sexy' || prediction.className === 'Hentai') &&
+               prediction.probability > 0.2;
+      });
+
+      if (unsafeFromVideo) {
+        applyBlurFromVideo();
+        safeTimeStart = null; // Reset safe time
+      } else {
+        handleSafePeriodFromVideo();
+      }
+    } catch (error) {
+      console.error('Error sending image:', error);
+    }
+  }
+
+  function applyBlurFromVideo() {
+    if (!isBlurringFromVideo) {
+      isBlurringFromVideo = true;
+      videoFromVideo.classList.add('blurred');
+    }
+  }
+
+  function handleSafePeriodFromVideo() {
+    if (isBlurringFromVideo) {
+      if (!safeTimeStart) {
+        safeTimeStart = Date.now();
+      } else {
+        const elapsedTime = Date.now() - safeTimeStart;
+        if (elapsedTime >= safeDurationFromVideo) {
+          removeBlurFromVideo();
+          safeTimeStart = null; // Reset safe time
+        }
+      }
+    }
+  }
+
+  function removeBlurFromVideo() {
+    if (isBlurringFromVideo) {
+      videoFromVideo.classList.remove('blurred');
+      isBlurringFromVideo = false;
+    }
+  }
+ 
+  
+
+  const videoFromURL = document.getElementById('videoFromURL');
+const canvasFromURL = document.getElementById('canvasFromURL');
+const ctxFromURL = canvasFromURL.getContext('2d');
+let isBlurringFromURL = false;
+let safeTimeStartURL = null;
+const safeDurationFromURL = 5000; // Duration to keep video safe before removing blur
+
+document.getElementById('submitURLButton').addEventListener('click', handleURLInput);
+
+function handleURLInput() {
+  const videoURL = document.getElementById('urlInput').value;
+  if (videoURL) {
+    videoFromURL.src = videoURL;
+    videoFromURL.addEventListener('play', () => {
+      setInterval(captureImageFromURL, 500); // Capture an image every 0.5 seconds
+    });
+  } else {
+    alert('Please enter a video URL.');
+  }
+}
+
+async function captureImageFromURL() {
+  if (videoFromURL.paused || videoFromURL.ended) return;
+
+  try {
+    canvasFromURL.width = videoFromURL.videoWidth;
+    canvasFromURL.height = videoFromURL.videoHeight;
+    ctxFromURL.drawImage(videoFromURL, 0, 0, canvasFromURL.width, canvasFromURL.height);
+    const dataUrlFromURL = canvasFromURL.toDataURL('image/jpeg');
+    const blobFromURL = dataURItoBlobFromURL(dataUrlFromURL);
+    await sendImageFromURL(blobFromURL);
+  } catch (error) {
+    console.error('Error capturing image:', error);
+  }
+}
+
+function dataURItoBlobFromURL(dataURIFromURL) {
+  const byteStringFromURL = atob(dataURIFromURL.split(',')[1]);
+  const mimeStringFromURL = dataURIFromURL.split(',')[0].split(':')[1].split(';')[0];
+  const abFromURL = new ArrayBuffer(byteStringFromURL.length);
+  const iaFromURL = new Uint8Array(abFromURL);
+  for (let i = 0; i < byteStringFromURL.length; i++) {
+    iaFromURL[i] = byteStringFromURL.charCodeAt(i);
+  }
+  return new Blob([abFromURL], { type: mimeStringFromURL });
+}
+
+async function sendImageFromURL(blobFromURL) {
+  const formDataFromURL = new FormData();
+  formDataFromURL.append('image', blobFromURL, 'image.jpg');
+
+  try {
+    const responseFromURL = await fetch('http://localhost:5552/nsfw', {
+      method: 'POST',
+      body: formDataFromURL
+    });
+
+    if (!responseFromURL.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const resultFromURL = await responseFromURL.json();
+    console.log('NSFW Detection Results:', resultFromURL);
+
+    // Check the results to determine if the content is unsafe
+    const unsafeFromURL = resultFromURL.some(prediction => {
+      return (prediction.className === 'Porn' || prediction.className === 'Sexy' || prediction.className === 'Hentai') &&
+             prediction.probability > 0.2;
+    });
+
+    if (unsafeFromURL) {
+      applyBlurFromURL();
+      safeTimeStartURL = null; // Reset safe time
+    } else {
+      handleSafePeriodFromURL();
+    }
+  } catch (error) {
+    console.error('Error sending image:', error);
+  }
+}
+
+function applyBlurFromURL() {
+  if (!isBlurringFromURL) {
+    isBlurringFromURL = true;
+    videoFromURL.classList.add('blurred');
+  }
+}
+
+function handleSafePeriodFromURL() {
+  if (isBlurringFromURL) {
+    if (!safeTimeStartURL) {
+      safeTimeStartURL = Date.now();
+    } else {
+      const elapsedTime = Date.now() - safeTimeStartURL;
+      if (elapsedTime >= safeDurationFromURL) {
+        removeBlurFromURL();
+        safeTimeStartURL = null; // Reset safe time
+      }
+    }
+  }
+}
+
+function removeBlurFromURL() {
+  if (isBlurringFromURL) {
+    videoFromURL.classList.remove('blurred');
+    isBlurringFromURL = false;
+  }
+}
+
+
+  // Webcam handling
+  const video = document.getElementById('webcamVideo');
+  const canvas = document.getElementById('videoCanvas');
+  const ctx = canvas.getContext('2d');
+  let isBlurring = false;
+  let lastUnsafeTime = 0;
+  const safeDuration = 5000; // 5 seconds
+
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    } catch (error) {
+      console.error('Error starting camera:', error);
+    }
+  }
+
+  async function captureImage() {
+    canvas.width = video.videoWidth || 640; // Default to 640 if not available
+    canvas.height = video.videoHeight || 480; // Default to 480 if not available
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    const blob = dataURItoBlob(dataUrl);
+    await sendImage(blob);
+  }
+
+  function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  }
+
+  async function sendImage(blob) {
+    const formData = new FormData();
+    formData.append('image', blob, 'image.jpg');
+
+    try {
+      const response = await fetch('http://localhost:5552/nsfw', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const result = await response.json();
+      console.log('NSFW Detection Results:', result);
+
+      const unsafe = result.some(prediction => {
+        return (prediction.className === 'Porn' || prediction.className === 'Sexy' || prediction.className === 'Hentai') &&
+               prediction.probability > 0.3;
+      });
+
+      handleBlurring(unsafe);
+    } catch (error) {
+      console.error('Error sending image:', error);
+    }
+  }
+
+  function handleBlurring(unsafe) {
+    if (unsafe) {
+      if (!isBlurring) {
+        startBlurring();
+      }
+      lastUnsafeTime = Date.now();
+    } else {
+      const timeSinceLastUnsafe = Date.now() - lastUnsafeTime;
+      if (isBlurring && timeSinceLastUnsafe >= safeDuration) {
+        stopBlurring();
+      }
+    }
+  }
+
+  function startBlurring() {
+    isBlurring = true;
+    video.classList.add('blurred');
+  }
+
+  function stopBlurring() {
+    isBlurring = false;
+    video.classList.remove('blurred');
+  }
+
+  async function startLiveVideo() {
+  try {
+    // Request webcam access and get the stream
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    // Set the video source to the webcam stream
+    video.srcObject = stream;
+
+    // Make the video element visible
+    video.style.display = 'block';
+
+    // Hide the start button and show the stop button
+    document.getElementById('startLiveButton').style.display = 'none';
+    document.getElementById('stopLiveButton').style.display = 'block';
+
+    // Initialize the canvas size
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    // Start analyzing frames
+    startFrameAnalysis();
+  } catch (error) {
+    // Log any errors that occur
+    console.error('Error accessing webcam:', error);
+  }
+}
+
+  function stopLiveVideo() {
+    if (video.srcObject) {
+      const stream = video.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      video.srcObject = null;
+    }
+
+    video.style.display = 'none';
+    document.getElementById('startLiveButton').style.display = 'block';
+    document.getElementById('stopLiveButton').style.display = 'none';
+  }
+
+  function startFrameAnalysis() {
+    setInterval(async () => {
+      if (!video.srcObject) return;
+
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          await sendImage(blob);
+        } else {
+          console.error('Failed to create blob from canvas.');
+        }
+      }, 'image/jpeg');
+    }, 1000); // Capture frame every 1 second
+  }
+
+  // Start the webcam on page load
+  startCamera();
+</script>
+
 </body>
 </html>
